@@ -4,7 +4,7 @@
 
 ## Code Example
 
-    #include <umigv_utilies/rosparam.hpp>
+    #include <umigv_utilities/rosparam.hpp>
 
     ros::NodeHandle private_handle{ "~" };
     auto frame_id = umigv::get_parameter_fatal<std::string>(private_handle, "frame_id");
