@@ -26,7 +26,9 @@ constexpr const ToT& byte_cast(const FromT &from) noexcept {
     return *reinterpret_cast<const ToT*>(&from);
 }
 
-void blocking_shutdown() noexcept __attribute__((noreturn)) {
+void blocking_shutdown() noexcept __attribute__((noreturn));
+
+void blocking_shutdown() noexcept {
     ros::shutdown();
     ros::waitForShutdown();
     std::exit(EXIT_FAILURE);
