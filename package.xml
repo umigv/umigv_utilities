@@ -1,0 +1,14 @@
+<package format="2">
+    <name>umigv_utilities</name>
+    <version>0.1.0</version>
+    <description>Header-only utilities library.</description>
+    <maintainer email="gregjm@umich.edu">Gregory Meyer</maintainer>
+    <license>BSD 3-Clause License</license>
+
+    <url type="repository">https://github.com/umigv/umigv_utilities</url>
+    <author>Gregory Meyer</author>
+
+    <buildtool_depend>catkin</buildtool_depend>
+
+    <depend>roscpp</depend>
+</package>
