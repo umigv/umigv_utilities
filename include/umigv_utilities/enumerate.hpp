@@ -4,7 +4,7 @@
 // range helper; provided a range or iterator pair, will enumerate each
 // element upon dereferencing
 
-#include "types.hpp" // umigv::usize
+#include "types.hpp" // umigv::usize, umigv::isize
 
 #include <iterator> // std::begin, std::end, std::iterator_traits
 #include <utility> // std::forward, std::initializer_list, std::pair
@@ -49,7 +49,7 @@ public:
         return (lhs.begin_ != lhs.end_) or (lhs.end_ != rhs.end_);
     }
 
-    value_type operator*() {
+    value_type operator*() const {
         return { index_, *begin_ };
     }
 

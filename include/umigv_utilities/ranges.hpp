@@ -5,5 +5,6 @@
 
 #include "enumerate.hpp"
 #include "map.hpp"
+#include "zip.hpp"
 
 #endif

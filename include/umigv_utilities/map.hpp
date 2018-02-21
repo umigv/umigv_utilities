@@ -7,12 +7,12 @@
 
 #include "types.hpp" // umigv::isize
 
-#include "detail/invoke.hpp" // umigv::detail::invoke
+#include "detail/invoke.hpp" // umigv::detail::invoke,
+                             // umigv::detail::InvokeResultT
 
 #include <iterator> // std::begin, std::end, std::iterator_traits
-#include <utility> // std::forward, std::initializer_list, std::declval
 #include <type_traits> // std::result_of_t
-#include <experimental/functional>
+#include <utility> // std::forward, std::initializer_list, std::declval
 
 namespace umigv {
 
