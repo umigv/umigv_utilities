@@ -58,7 +58,7 @@ public:
         return (lhs.begin_ != lhs.end_) or (lhs.end_ != rhs.end_);
     }
 
-    decltype(auto) operator*() {
+    reference operator*() {
         return detail::invoke(function_, *begin_);
     }
 
