@@ -58,7 +58,7 @@ public:
         return (lhs.begin_ != lhs.end_) or (lhs.end_ != rhs.end_);
     }
 
-    reference operator*() {
+    reference operator*() const {
         return detail::invoke(function_, *begin_);
     }
 
@@ -67,6 +67,16 @@ private:
     End end_;
     Function function_;
 };
+
+template <typename Begin, typename End, typename Function>
+decltype(auto) begin(MappedRange<Begin, End, Function> &range) noexcept {
+    return range.begin();
+}
+
+template <typename Begin, typename End, typename Function>
+decltype(auto) end(MappedRange<Begin, End, Function> &range) noexcept {
+    return range.end();
+}
 
 template <typename Range, typename Function>
 auto map(Range &&range, Function &&function) {
