@@ -7,5 +7,6 @@
 #include "map.hpp"
 #include "zip.hpp"
 #include "filter.hpp"
+#include "reduce.hpp"
 
 #endif
