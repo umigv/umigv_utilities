@@ -11,7 +11,7 @@
                              // umigv::detail::InvokeResultT
 
 #include <iterator> // std::begin, std::end, std::iterator_traits
-#include <type_traits> // std::result_of_t
+#include <type_traits> // std::common_type_t
 #include <utility> // std::forward, std::initializer_list, std::declval
 
 namespace umigv {
@@ -120,11 +120,21 @@ auto map(Range &&range, Function &&function) {
     using std::begin;
     using std::end;
 
-    using IteratorT = decltype(begin(std::forward<Range>(range)));
+    using IteratorT = decltype((begin(std::forward<Range>(range))));
     using RangeT = MappedRange<IteratorT, Function>;
 
     return RangeT{ begin(std::forward<Range>(range)),
                    end(std::forward<Range>(range)),
+                   std::forward<Function>(function) };
+}
+
+template <typename Begin, typename End, typename Function,
+          typename = std::common_type_t<Begin, End>>
+auto map(Begin &&begin, End &&end, Function &&function) {
+    using IteratorT = std::common_type_t<Begin, End>;
+    using RangeT = MappedRange<IteratorT, Function>;
+
+    return RangeT{ std::forward<Begin>(begin), std::forward<End>(end),
                    std::forward<Function>(function) };
 }
 
@@ -133,19 +143,10 @@ auto map(const std::initializer_list<T> list, Function &&function) {
     using std::begin;
     using std::end;
 
-    using IteratorT = decltype(begin(list));
+    using IteratorT = decltype((begin(list)));
     using RangeT = MappedRange<IteratorT, Function>;
 
     return RangeT{ begin(list), end(list), std::forward<Function>(function) };
-}
-
-template <typename Begin, typename End, typename Function,
-          typename = std::common_type_t<Begin, End>>
-auto map(Begin &&begin, End &&end, Function &&function) {
-    using RangeT = MappedRange<std::common_type_t<Begin, End>, Function>;
-
-    return RangeT{ std::forward<Begin>(begin), std::forward<End>(end),
-                   std::forward<Function>(function) };
 }
 
 } // namespace umigv

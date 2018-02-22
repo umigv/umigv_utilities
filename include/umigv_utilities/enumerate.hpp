@@ -7,6 +7,7 @@
 #include "types.hpp" // umigv::usize, umigv::isize
 
 #include <iterator> // std::begin, std::end, std::iterator_traits
+#include <type_traits> // std::common_type_t
 #include <utility> // std::forward, std::initializer_list, std::pair
 
 namespace umigv {
@@ -105,9 +106,11 @@ auto enumerate(Range &&range) {
                    end(std::forward<Range>(range)) };
 }
 
-template <typename Count = usize, typename Begin, typename End>
+template <typename Count = usize, typename Begin, typename End,
+          typename = std::common_type_t<Begin, End>>
 auto enumerate(Begin &&begin, End &&end) {
-    using RangeT = EnumeratedRange<std::common_type_t<Begin, End>, Count>;
+    using IteratorT = std::common_type_t<Begin, End>;
+    using RangeT = EnumeratedRange<IteratorT, Count>;
 
     return RangeT{ std::forward<Begin>(begin), std::forward<End>(end) };
 }
@@ -115,8 +118,9 @@ auto enumerate(Begin &&begin, End &&end) {
 template <typename Count = usize, typename T>
 auto enumerate(const std::initializer_list<T> list) {
     using std::begin;
+    using std::end;
 
-    using IteratorT = decltype(begin(list));
+    using IteratorT = decltype((begin(list)));
     using RangeT = EnumeratedRange<IteratorT, Count>;
 
     return RangeT{ begin(list), end(list) };
