@@ -16,65 +16,102 @@
 
 namespace umigv {
 
-template <typename Begin, typename End, typename Function>
+template <typename It, typename Function>
 class MappedRange {
-    using DereferenceT = decltype((*std::declval<Begin>()));
+    using DereferenceT = decltype((*std::declval<It>()));
     using ReturnT = detail::InvokeResultT<Function, DereferenceT>;
 
 public:
-    using difference_type = isize;
-    using value_type = typename std::decay<ReturnT>::type;
-    using pointer = const value_type*;
-    using reference = ReturnT;
-    using iterator_category = std::forward_iterator_tag;
+    class Iterator {
+    public:
+        friend MappedRange;
+
+        using difference_type = isize;
+        using value_type = typename std::decay<ReturnT>::type;
+        using pointer = const value_type*;
+        using reference = ReturnT;
+        using iterator_category = std::forward_iterator_tag;
+
+        Iterator& operator++() noexcept(noexcept(++std::declval<It>())) {
+            ++current_;
+            return *this;
+        }
+
+        Iterator operator++(int)
+            noexcept(noexcept(Iterator{ std::declval<Iterator>() }))
+        {
+            const Iterator previous = *this;
+
+            ++*this;
+
+            return previous;
+        }
+
+        reference operator*() const
+            noexcept(noexcept(detail::invoke(std::declval<Function>(),
+                                             *std::declval<It>())))
+        {
+            return detail::invoke(function_, *current_);
+        }
+
+        friend bool operator==(const Iterator lhs, const Iterator rhs)
+            noexcept(noexcept(std::declval<It>() == std::declval<It>()))
+        {
+            return lhs.current_ == rhs.current_;
+        }
+
+        friend bool operator!=(const Iterator lhs, const Iterator rhs)
+            noexcept(noexcept(std::declval<It>() != std::declval<It>()))
+        {
+            return lhs.current_ != rhs.current_;
+        }
+
+    private:
+        Iterator(It current, Function function)
+            noexcept(
+                noexcept(It{ std::move(std::declval<It>()) })
+                and noexcept(Function{ std::move(std::declval<Function>()) })
+            ) : current_{ std::move(current) },
+                function_{ std::move(function) }
+        { }
+
+        It current_;
+        Function function_;
+    };
 
     template <typename F>
-    MappedRange(Begin begin, End end, F &&f)
-        : begin_{ begin }, end_{ end },
+    MappedRange(It begin, It end, F &&f)
+        : begin_{ std::move(begin) }, end_{ std::move(end) },
           function_{ std::forward<F>(f) }
     { }
 
-    MappedRange& begin() noexcept {
-        return *this;
+    Iterator begin() const
+        noexcept(noexcept(Iterator{ std::declval<It>(),
+                                    std::declval<Function>() }))
+    {
+        return Iterator{ begin_, function_ };
     }
 
-    MappedRange& end() noexcept {
-        return *this;
-    }
-
-    MappedRange& operator++() {
-        ++begin_;
-
-        return *this;
-    }
-
-    friend bool operator==(const MappedRange lhs,
-                           const MappedRange rhs) noexcept {
-        return (lhs.begin_ == lhs.end_) and (lhs.end_ == rhs.end_);
-    }
-
-    friend bool operator!=(const MappedRange lhs,
-                           const MappedRange rhs) noexcept {
-        return (lhs.begin_ != lhs.end_) or (lhs.end_ != rhs.end_);
-    }
-
-    reference operator*() const {
-        return detail::invoke(function_, *begin_);
+    Iterator end() const
+        noexcept(noexcept(Iterator{ std::declval<It>(),
+                                    std::declval<Function>() }))
+    {
+        return Iterator{ end_, function_ };
     }
 
 private:
-    Begin begin_;
-    End end_;
+    It begin_;
+    It end_;
     Function function_;
 };
 
-template <typename Begin, typename End, typename Function>
-decltype(auto) begin(MappedRange<Begin, End, Function> &range) noexcept {
+template <typename Iterator, typename Function>
+decltype(auto) begin(MappedRange<Iterator, Function> &range) noexcept {
     return range.begin();
 }
 
-template <typename Begin, typename End, typename Function>
-decltype(auto) end(MappedRange<Begin, End, Function> &range) noexcept {
+template <typename Iterator, typename Function>
+decltype(auto) end(MappedRange<Iterator, Function> &range) noexcept {
     return range.end();
 }
 
@@ -83,9 +120,8 @@ auto map(Range &&range, Function &&function) {
     using std::begin;
     using std::end;
 
-    using BeginT = decltype(begin(std::forward<Range>(range)));
-    using EndT = decltype(end(std::forward<Range>(range)));
-    using RangeT = MappedRange<BeginT, EndT, Function>;
+    using IteratorT = decltype(begin(std::forward<Range>(range)));
+    using RangeT = MappedRange<IteratorT, Function>;
 
     return RangeT{ begin(std::forward<Range>(range)),
                    end(std::forward<Range>(range)),
@@ -94,17 +130,19 @@ auto map(Range &&range, Function &&function) {
 
 template <typename T, typename Function>
 auto map(const std::initializer_list<T> list, Function &&function) {
-    using BeginT = decltype(begin(list));
-    using EndT = decltype(end(list));
-    using RangeT = MappedRange<BeginT, EndT, Function>;
+    using std::begin;
+    using std::end;
 
-    return RangeT{ std::begin(list), std::end(list),
-                   std::forward<Function>(function) };
+    using IteratorT = decltype(begin(list));
+    using RangeT = MappedRange<IteratorT, Function>;
+
+    return RangeT{ begin(list), end(list), std::forward<Function>(function) };
 }
 
-template <typename Begin, typename End, typename Function>
+template <typename Begin, typename End, typename Function,
+          typename = std::common_type_t<Begin, End>>
 auto map(Begin &&begin, End &&end, Function &&function) {
-    using RangeT = MappedRange<Begin, End, Function>;
+    using RangeT = MappedRange<std::common_type_t<Begin, End>, Function>;
 
     return RangeT{ std::forward<Begin>(begin), std::forward<End>(end),
                    std::forward<Function>(function) };

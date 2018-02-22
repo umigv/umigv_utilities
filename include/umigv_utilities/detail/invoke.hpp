@@ -10,7 +10,7 @@ namespace detail {
 template <typename T, typename Function, typename U, typename ...Args,
           typename = std::enable_if_t<std::is_base_of<T, std::decay_t<U>>::value>>
 decltype(auto) invoke_impl(Function T::* function, U &&u, Args &&...args) {
-    return (std::forward<T>(u).*function)(std::forward<Args>(args)...);
+    return (std::forward<U>(u).*function)(std::forward<Args>(args)...);
 }
 
 template <typename Function, typename T, typename U, typename ...Args,
