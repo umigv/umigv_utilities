@@ -120,7 +120,7 @@ auto map(Range &&range, Function &&function) {
     using std::begin;
     using std::end;
 
-    using IteratorT = decltype((begin(std::forward<Range>(range))));
+    using IteratorT = decltype(begin(std::forward<Range>(range)));
     using RangeT = MappedRange<IteratorT, Function>;
 
     return RangeT{ begin(std::forward<Range>(range)),
@@ -134,8 +134,7 @@ auto map(Begin begin, End end, Function &&function) {
     using IteratorT = std::common_type_t<Begin, End>;
     using RangeT = MappedRange<IteratorT, Function>;
 
-    return RangeT{ std::forward<Begin>(begin), std::forward<End>(end),
-                   std::forward<Function>(function) };
+    return RangeT{ begin, end, std::forward<Function>(function) };
 }
 
 template <typename T, typename Function>
@@ -143,7 +142,7 @@ auto map(const std::initializer_list<T> list, Function &&function) {
     using std::begin;
     using std::end;
 
-    using IteratorT = decltype((begin(list)));
+    using IteratorT = decltype(begin(list));
     using RangeT = MappedRange<IteratorT, Function>;
 
     return RangeT{ begin(list), end(list), std::forward<Function>(function) };

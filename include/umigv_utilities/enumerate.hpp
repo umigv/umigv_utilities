@@ -112,7 +112,7 @@ auto enumerate(Begin begin, End end) {
     using IteratorT = std::common_type_t<Begin, End>;
     using RangeT = EnumeratedRange<IteratorT, Count>;
 
-    return RangeT{ std::forward<Begin>(begin), std::forward<End>(end) };
+    return RangeT{ begin, end };
 }
 
 template <typename Count = usize, typename T>
@@ -120,7 +120,7 @@ auto enumerate(const std::initializer_list<T> list) {
     using std::begin;
     using std::end;
 
-    using IteratorT = decltype((begin(list)));
+    using IteratorT = decltype(begin(list));
     using RangeT = EnumeratedRange<IteratorT, Count>;
 
     return RangeT{ begin(list), end(list) };

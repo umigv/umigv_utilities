@@ -131,7 +131,7 @@ auto filter(Range &&range, Predicate &&predicate) {
     using std::begin;
     using std::end;
 
-    using IteratorT = decltype((begin(std::forward<Range>(range))));
+    using IteratorT = decltype(begin(std::forward<Range>(range)));
     using RangeT = FilteredRange<IteratorT, Predicate>;
 
     return RangeT{ begin(std::forward<Range>(range)),
@@ -144,7 +144,7 @@ auto filter(const std::initializer_list<T> list, Predicate &&predicate) {
     using std::begin;
     using std::end;
 
-    using IteratorT = decltype((begin(list)));
+    using IteratorT = decltype(begin(list));
     using RangeT = FilteredRange<IteratorT, Predicate>;
 
     return RangeT{ begin(list), end(list), std::forward<Predicate>(predicate) };
@@ -156,8 +156,7 @@ auto filter(Begin begin, End end, Predicate &&predicate) {
     using IteratorT = std::common_type_t<Begin, End>;
     using RangeT = FilteredRange<IteratorT, Predicate>;
 
-    return RangeT{ std::forward<Begin>(begin), std::forward<End>(end),
-                   std::forward<Predicate>(predicate) };
+    return RangeT{ begin, end, std::forward<Predicate>(predicate) };
 }
 
 } // namespace umigv
