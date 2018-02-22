@@ -152,7 +152,7 @@ auto filter(const std::initializer_list<T> list, Predicate &&predicate) {
 
 template <typename Begin, typename End, typename Predicate,
           typename = std::common_type_t<Begin, End>>
-auto filter(Begin &&begin, End &&end, Predicate &&predicate) {
+auto filter(Begin begin, End end, Predicate &&predicate) {
     using IteratorT = std::common_type_t<Begin, End>;
     using RangeT = FilteredRange<IteratorT, Predicate>;
 

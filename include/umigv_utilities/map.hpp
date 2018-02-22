@@ -32,7 +32,7 @@ public:
         using reference = ReturnT;
         using iterator_category = std::forward_iterator_tag;
 
-        Iterator& operator++() noexcept(noexcept(++std::declval<It>())) {
+        Iterator& operator++() noexcept(noexcept(++std::declval<It&>())) {
             ++current_;
             return *this;
         }
@@ -130,7 +130,7 @@ auto map(Range &&range, Function &&function) {
 
 template <typename Begin, typename End, typename Function,
           typename = std::common_type_t<Begin, End>>
-auto map(Begin &&begin, End &&end, Function &&function) {
+auto map(Begin begin, End end, Function &&function) {
     using IteratorT = std::common_type_t<Begin, End>;
     using RangeT = MappedRange<IteratorT, Function>;
 

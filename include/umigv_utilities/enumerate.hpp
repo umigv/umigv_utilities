@@ -108,7 +108,7 @@ auto enumerate(Range &&range) {
 
 template <typename Count = usize, typename Begin, typename End,
           typename = std::common_type_t<Begin, End>>
-auto enumerate(Begin &&begin, End &&end) {
+auto enumerate(Begin begin, End end) {
     using IteratorT = std::common_type_t<Begin, End>;
     using RangeT = EnumeratedRange<IteratorT, Count>;
 
