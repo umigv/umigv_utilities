@@ -7,6 +7,7 @@
 #include <cstdint>
 
 namespace umigv {
+inline namespace types {
 
 using i8 = std::int8_t;
 using i16 = std::int16_t;
@@ -24,7 +25,9 @@ using usize = std::size_t;
 using f32 = float;
 using f64 = double;
 
-namespace literals {
+} // inline namespace types
+
+inline namespace literals {
 
 constexpr i8 operator""_i8(const unsigned long long literal) noexcept {
     return static_cast<i8>(literal);
@@ -74,7 +77,7 @@ constexpr f64 operator""_f64(const long double literal) noexcept {
     return static_cast<f64>(literal);
 }
 
-} // namespace literals
+} // inline namespace literals
 } // namespace umigv
 
 #endif
