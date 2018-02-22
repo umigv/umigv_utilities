@@ -37,16 +37,6 @@ public:
             return *this;
         }
 
-        Iterator operator++(int)
-            noexcept(noexcept(Iterator{ std::declval<Iterator>() }))
-        {
-            const Iterator previous = *this;
-
-            ++*this;
-
-            return previous;
-        }
-
         reference operator*() const
             noexcept(noexcept(detail::invoke(std::declval<Function>(),
                                              *std::declval<It>())))
@@ -106,12 +96,22 @@ private:
 };
 
 template <typename Iterator, typename Function>
-decltype(auto) begin(MappedRange<Iterator, Function> &range) noexcept {
+typename MappedRange<Iterator, Function>::Iterator
+begin(const MappedRange<Iterator, Function> &range)
+    noexcept(noexcept(
+        std::declval<const MappedRange<Iterator, Function>&>().begin()
+    ))
+{
     return range.begin();
 }
 
 template <typename Iterator, typename Function>
-decltype(auto) end(MappedRange<Iterator, Function> &range) noexcept {
+typename MappedRange<Iterator, Function>::Iterator
+end(const MappedRange<Iterator, Function> &range)
+    noexcept(noexcept(
+        std::declval<const MappedRange<Iterator, Function>&>().end()
+    ))
+{
     return range.end();
 }
 

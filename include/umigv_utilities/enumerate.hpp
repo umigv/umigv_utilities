@@ -12,60 +12,84 @@
 namespace umigv {
 
 // lazy evaluation iterator that return a pair
-template <typename Count, typename Begin, typename End>
+template <typename It, typename Count = usize>
 class EnumeratedRange {
 public:
-    using difference_type = isize;
-    using value_type = std::pair<Count, decltype((*std::declval<Begin>()))>;
-    using pointer = const value_type*;
-    using reference = const value_type&;
-    using iterator_category = std::forward_iterator_tag;
+    class Iterator {
+    public:
+        friend EnumeratedRange;
 
-    EnumeratedRange(Begin begin, End end) : begin_{ begin }, end_{ end },
-                                            index_{ 0 } { }
+        using difference_type = isize;
+        using value_type = std::pair<Count, decltype((*std::declval<It>()))>;
+        using pointer = const value_type*;
+        using reference = const value_type&;
+        using iterator_category = std::forward_iterator_tag;
 
-    EnumeratedRange& begin() noexcept {
-        return *this;
+        Iterator& operator++() noexcept(noexcept(++std::declval<It&>())
+                                        and noexcept(++std::declval<Count&>())) {
+            ++current_;
+            ++index_;
+
+            return *this;
+        }
+
+        value_type operator*() const
+            noexcept(noexcept(value_type{ std::declval<Count>(),
+                                          *std::declval<It>() }))
+        {
+            return value_type{ index_, *current_ };
+        }
+
+        friend bool operator==(const Iterator lhs, const Iterator rhs)
+            noexcept(noexcept(std::declval<It>() == std::declval<It>()))
+        {
+            return lhs.current_ == rhs.current_;
+        }
+
+        friend bool operator!=(const Iterator lhs, const Iterator rhs)
+            noexcept(noexcept(std::declval<It>() != std::declval<It>()))
+        {
+            return lhs.current_ != rhs.current_;
+        }
+
+    private:
+        explicit Iterator(It current)
+            noexcept(noexcept(It{ std::move(std::declval<It>()) })
+                     and noexcept(Count{ }))
+            : current_{ std::move(current) }, index_{ }
+        { }
+
+        It current_;
+        Count index_;
+    };
+
+    EnumeratedRange(It begin, It end)
+        noexcept(noexcept(It{ std::move(std::declval<It>()) }))
+        : begin_{ std::move(begin) }, end_{ std::move(end) }
+    { }
+
+    Iterator begin() const noexcept(noexcept(Iterator{ std::declval<It>() })) {
+        return Iterator{ begin_ };
     }
 
-    EnumeratedRange& end() noexcept {
-        return *this;
-    }
-
-    EnumeratedRange& operator++() {
-        ++index_;
-        ++begin_;
-
-        return *this;
-    }
-
-    friend bool operator==(const EnumeratedRange lhs,
-                           const EnumeratedRange rhs) noexcept {
-        return (lhs.begin_ == lhs.end_) and (lhs.end_ == rhs.end_);
-    }
-
-    friend bool operator!=(const EnumeratedRange lhs,
-                           const EnumeratedRange rhs) noexcept {
-        return (lhs.begin_ != lhs.end_) or (lhs.end_ != rhs.end_);
-    }
-
-    value_type operator*() const {
-        return { index_, *begin_ };
+    Iterator end() const noexcept(noexcept(Iterator{ std::declval<It>() })) {
+        return Iterator{ end_ };
     }
 
 private:
-    Begin begin_;
-    End end_;
-    Count index_;
+    It begin_;
+    It end_;
 };
 
-template <typename Count, typename Begin, typename End>
-decltype(auto) begin(EnumeratedRange<Count, Begin, End> &range) noexcept {
+template <typename Iterator, typename Count>
+typename EnumeratedRange<Iterator, Count>::Iterator
+begin(const EnumeratedRange<Iterator, Count> &range) noexcept {
     return range.begin();
 }
 
-template <typename Count, typename Begin, typename End>
-decltype(auto) end(EnumeratedRange<Count, Begin, End> &range) noexcept {
+template <typename Iterator, typename Count>
+typename EnumeratedRange<Iterator, Count>::Iterator
+end(const EnumeratedRange<Iterator, Count> &range) noexcept {
     return range.end();
 }
 
@@ -74,9 +98,8 @@ auto enumerate(Range &&range) {
     using std::begin;
     using std::end;
 
-    using BeginT = decltype(begin(std::forward<Range>(range)));
-    using EndT = decltype(end(std::forward<Range>(range)));
-    using RangeT = EnumeratedRange<Count, BeginT, EndT>;
+    using IteratorT = decltype(begin(std::forward<Range>(range)));
+    using RangeT = EnumeratedRange<IteratorT, Count>;
 
     return RangeT{ begin(std::forward<Range>(range)),
                    end(std::forward<Range>(range)) };
@@ -84,17 +107,19 @@ auto enumerate(Range &&range) {
 
 template <typename Count = usize, typename Begin, typename End>
 auto enumerate(Begin &&begin, End &&end) {
-    using RangeT = EnumeratedRange<Count, Begin, End>;
+    using RangeT = EnumeratedRange<std::common_type_t<Begin, End>, Count>;
 
     return RangeT{ std::forward<Begin>(begin), std::forward<End>(end) };
 }
 
 template <typename Count = usize, typename T>
 auto enumerate(const std::initializer_list<T> list) {
-    using IteratorT = decltype(std::begin(list));
-    using RangeT = EnumeratedRange<Count, IteratorT, IteratorT>;
+    using std::begin;
 
-    return RangeT{ std::begin(list), std::end(list) };
+    using IteratorT = decltype(begin(list));
+    using RangeT = EnumeratedRange<IteratorT, Count>;
+
+    return RangeT{ begin(list), end(list) };
 }
 
 } // namespace umigv
