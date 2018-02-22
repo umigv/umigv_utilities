@@ -13,9 +13,7 @@ constexpr bool boolean_and(bool first) noexcept {
 }
 
 template <typename ...Types>
-constexpr bool boolean_and(bool first, bool second, Types &&...types)
-    noexcept(noexcept(boolean_and(std::declval<bool>(), std::declval<Types>())))
-{
+constexpr bool boolean_and(bool first, bool second, Types &&...types) noexcept {
     return first and boolean_and(second, std::forward<Types>(types)...);
 }
 
@@ -24,9 +22,7 @@ constexpr bool boolean_or(bool first) noexcept {
 }
 
 template <typename ...Types>
-constexpr bool boolean_or(bool first, bool second, Types &&...types)
-    noexcept(noexcept(boolean_or(std::declval<bool>(), std::declval<Types>())))
-{
+constexpr bool boolean_or(bool first, bool second, Types &&...types) {
     return first or boolean_or(second, std::forward<Types>(types)...);
 }
 

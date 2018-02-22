@@ -1,6 +1,8 @@
 #ifndef UMIGV_FILTER_HPP
 #define UMIGV_FILTER_HPP
 
+// dereferencing filter returns only elements that evaluate true by a predicate
+
 #include "types.hpp" // umigv::isize
 #include "detail/invoke.hpp" // umigv::detail::invoke
 
@@ -103,6 +105,26 @@ private:
     It end_;
     Predicate predicate_;
 };
+
+template <typename Iterator, typename Predicate>
+typename FilteredRange<Iterator, Predicate>::Iterator
+begin(const FilteredRange<Iterator, Predicate> &range)
+    noexcept(noexcept(
+        std::declval<FilteredRange<Iterator, Predicate>>().begin()
+    ))
+{
+    return range.begin();
+}
+
+template <typename Iterator, typename Predicate>
+typename FilteredRange<Iterator, Predicate>::Iterator
+end(const FilteredRange<Iterator, Predicate> &range)
+    noexcept(noexcept(
+        std::declval<FilteredRange<Iterator, Predicate>>().end()
+    ))
+{
+    return range.end();
+}
 
 template <typename Range, typename Predicate>
 auto filter(Range &&range, Predicate &&predicate) {
