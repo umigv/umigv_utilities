@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 
 project(umigv_utilities)
 
-find_package(catkin REQUIRED COMPONENTS roscpp)
+find_package(catkin REQUIRED COMPONENTS phidgets_api roscpp)
 
 catkin_package(CATKIN_DEPENDS roscpp INCLUDE_DIRS include)
 

@@ -3,37 +3,36 @@
 
 // functions relating to usage of the ROS parameter server
 
+#include "exceptions.hpp" // umigv::ParameterNotFoundException
 #include "traits.hpp" // umigv::IsParameterV
 
 #include <ros/node_handle.h> // ros::NodeHandle
 
-#include <stdexcept> // std::runtime_error
 #include <string> // std::string
 #include <type_traits> // std::enable_if_t
-#include <utility> // std::move
 
 namespace umigv {
 
-// fetches parameter from rosparam using handle, throws std::runtime_error
-// if unable to fetch from parameter server
-template <typename T>
-std::enable_if_t<IsParameterV<T>, T>
-get_parameter_fatal(const ros::NodeHandle &handle,
-                    const std::string &parameter) {
+// fetches parameter from rosparam using handle
+// throws umigv::ParameterNotFoundException if
+// unable to fetch from parameter server
+template <typename T, typename = std::enable_if_t<IsParameterV<T>>>
+T get_parameter_fatal(const ros::NodeHandle &handle,
+                      const std::string &parameter) {
     T fetched;
 
     if (not handle.getParam(parameter, fetched)) {
-        throw std::runtime_error{ "get_parameter_fatal" };
+        throw ParameterNotFoundException{ "get_parameter_fatal", parameter };
     }
 
     return fetched;
 }
 
-
-template <typename T>
-std::enable_if_t<IsParameterV<T>, T>
-get_parameter_or(const ros::NodeHandle &handle, const std::string &name,
-                 const T &fallback = T{ }) {
+// fetches parameter from rosparam using handle
+// returns default value if unable to fetch
+template <typename T, typename = std::enable_if_t<IsParameterV<T>>>
+T get_parameter_or(const ros::NodeHandle &handle, const std::string &name,
+                   const T &fallback = T{ }) {
     T fetched;
 
     handle.param(name, fetched, fallback);

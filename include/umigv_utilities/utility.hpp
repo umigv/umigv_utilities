@@ -1,7 +1,7 @@
 #ifndef UMIGV_UTILITY_HPP
 #define UMIGV_UTILITY_HPP
 
-// utility header; whatever useful but otherwise ungrouped functions we need
+// utility header; useful but otherwise ungrouped functions
 
 #include <ros/ros.h> // ros::shutdown, ros::waitForShutdown
 
@@ -10,20 +10,20 @@
 
 namespace umigv {
 
-// converts from ToT to FromT via type punning
-template <typename ToT, typename FromT,
-          typename = std::enable_if_t<sizeof(ToT) == sizeof(FromT) and
-                                      alignof(ToT) == alignof(FromT)>>
-constexpr ToT& byte_cast(FromT &from) noexcept {
-    return *reinterpret_cast<ToT*>(&from);
+// converts to To from From via type punning
+template <typename To, typename From,
+          typename = std::enable_if_t<sizeof(To) == sizeof(From) &&
+                                      alignof(To) == alignof(From)>>
+constexpr To& byte_cast(From &from) noexcept {
+    return *reinterpret_cast<To*>(&from);
 }
 
-// converts from ToT to FromT via type punning
-template <typename ToT, typename FromT,
-          typename = std::enable_if_t<sizeof(ToT) == sizeof(FromT) and
-                                      alignof(ToT) == alignof(FromT)>>
-constexpr const ToT& byte_cast(const FromT &from) noexcept {
-    return *reinterpret_cast<const ToT*>(&from);
+// converts to To from From via type punning
+template <typename To, typename From,
+          typename = std::enable_if_t<sizeof(To) == sizeof(From) &&
+                                      alignof(To) == alignof(From)>>
+constexpr const To& byte_cast(const From &from) noexcept {
+    return *reinterpret_cast<const To*>(&from);
 }
 
 void blocking_shutdown() noexcept __attribute__((noreturn));
