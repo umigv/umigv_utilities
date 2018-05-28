@@ -26,13 +26,26 @@ constexpr const To& byte_cast(const From &from) noexcept {
     return *reinterpret_cast<const To*>(&from);
 }
 
-void blocking_shutdown() noexcept __attribute__((noreturn));
-
-void blocking_shutdown() noexcept {
+[[noreturn]] inline void blocking_shutdown() noexcept {
     ros::shutdown();
     ros::waitForShutdown();
     std::exit(EXIT_FAILURE);
 }
+
+template <typename T>
+decltype(auto) adl_begin(T &&t) {
+    using std::begin;
+
+    return begin(std::forward<T>(t));
+}
+
+template <typename T>
+decltype(auto) adl_end(T &&t) {
+    using std::end;
+
+    return end(std::forward<T>(t));
+}
+
 
 } // namespace umigv
 

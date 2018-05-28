@@ -3,10 +3,11 @@
 
 // catch-all header containing operations on ranges of values
 
-#include "enumerate.hpp"
-#include "map.hpp"
-#include "zip.hpp"
-#include "filter.hpp"
-#include "reduce.hpp"
+#include <umigv_utilities/enumerate.hpp>
+#include <umigv_utilities/map.hpp>
+#include <umigv_utilities/zip.hpp>
+#include <umigv_utilities/filter.hpp>
+#include <umigv_utilities/reduce.hpp>
+#include <umigv_utilities/pairs.hpp>
 
 #endif
