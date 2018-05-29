@@ -1,7 +1,7 @@
 #ifndef DETAIL_BOOLEAN_HPP
 #define DETAIL_BOOLEAN_HPP
 
-#include "../types.hpp" // umigv::usize
+#include "umigv_utilities/types.hpp" // umigv::usize
 
 #include <utility> // std::forward, std::declval
 
