@@ -17,7 +17,7 @@ template <typename T>
 struct is_rosparam_literal : std::false_type { };
 
 template <typename T>
-constexpr inline bool is_rosparam_literal_v = is_rosparam_literal<T>::value;
+constexpr bool is_rosparam_literal_v = is_rosparam_literal<T>::value;
 
 template <>
 struct is_rosparam_literal<bool> : std::true_type { };
@@ -38,7 +38,7 @@ template <typename T>
 struct is_rosparam : is_rosparam_literal<T> { };
 
 template <typename T>
-constexpr inline bool is_rosparam_v = is_rosparam<T>::value;
+constexpr bool is_rosparam_v = is_rosparam<T>::value;
 
 template <typename T>
 struct is_rosparam<std::vector<T>> : is_rosparam_literal<T> { };
@@ -60,7 +60,7 @@ struct is_iterator<
 > : std::true_type { };
 
 template <typename T>
-constexpr inline bool is_iterator_v = is_iterator<T>::value;
+constexpr bool is_iterator_v = is_iterator<T>::value;
 
 namespace detail {
 
@@ -149,7 +149,7 @@ struct is_input_iterator : std::false_type { };
 template <typename T>
 struct is_input_iterator<T, true>
 : std::conditional_t<
-    std::is_base_of_v<std::input_iterator_tag, iterator_category_t<T>>,
+    std::is_base_of<std::input_iterator_tag, iterator_category_t<T>>::value,
     std::true_type, std::false_type
 > { };
 
@@ -159,7 +159,7 @@ struct is_output_iterator : std::false_type { };
 template <typename T>
 struct is_output_iterator<T, true>
 : std::conditional_t<
-    std::is_base_of_v<std::output_iterator_tag, iterator_category_t<T>>,
+    std::is_base_of<std::output_iterator_tag, iterator_category_t<T>>::value,
     std::true_type, std::false_type
 > { };
 
@@ -169,7 +169,7 @@ struct is_forward_iterator : std::false_type { };
 template <typename T>
 struct is_forward_iterator<T, true>
 : std::conditional_t<
-    std::is_base_of_v<std::forward_iterator_tag, iterator_category_t<T>>,
+    std::is_base_of<std::forward_iterator_tag, iterator_category_t<T>>::value,
     std::true_type, std::false_type
 > { };
 
@@ -179,7 +179,8 @@ struct is_bidirectional_iterator : std::false_type { };
 template <typename T>
 struct is_bidirectional_iterator<T, true>
 : std::conditional_t<
-    std::is_base_of_v<std::bidirectional_iterator_tag, iterator_category_t<T>>,
+    std::is_base_of<std::bidirectional_iterator_tag,
+                    iterator_category_t<T>>::value,
     std::true_type, std::false_type
 > { };
 
@@ -189,7 +190,8 @@ struct is_random_access_iterator : std::false_type { };
 template <typename T>
 struct is_random_access_iterator<T, true>
 : std::conditional_t<
-    std::is_base_of_v<std::random_access_iterator_tag, iterator_category_t<T>>,
+    std::is_base_of<std::random_access_iterator_tag,
+                    iterator_category_t<T>>::value,
     std::true_type, std::false_type
 > { };
 
@@ -199,27 +201,27 @@ template <typename T>
 struct is_input_iterator : detail::is_input_iterator<T, is_iterator_v<T>> { };
 
 template <typename T>
-constexpr inline bool is_input_iterator_v = is_input_iterator<T>::value;
+constexpr bool is_input_iterator_v = is_input_iterator<T>::value;
 
 template <typename T>
 struct is_output_iterator : detail::is_output_iterator<T, is_iterator_v<T>> { };
 
 template <typename T>
-constexpr inline bool is_output_iterator_v = is_output_iterator<T>::value;
+constexpr bool is_output_iterator_v = is_output_iterator<T>::value;
 
 template <typename T>
 struct is_forward_iterator
 : detail::is_forward_iterator<T, is_iterator_v<T>> { };
 
 template <typename T>
-constexpr inline bool is_forward_iterator_v = is_forward_iterator<T>::value;
+constexpr bool is_forward_iterator_v = is_forward_iterator<T>::value;
 
 template <typename T>
 struct is_bidirectional_iterator
 : detail::is_bidirectional_iterator<T, is_iterator_v<T>> { };
 
 template <typename T>
-constexpr inline bool is_bidirectional_iterator_v
+constexpr bool is_bidirectional_iterator_v
     = is_bidirectional_iterator<T>::value;
 
 template <typename T>
@@ -227,7 +229,7 @@ struct is_random_access_iterator
 : detail::is_random_access_iterator<T, is_iterator_v<T>> { };
 
 template <typename T>
-constexpr inline bool is_random_access_iterator_v
+constexpr bool is_random_access_iterator_v
     = is_random_access_iterator<T>::value;
 
 } // namespace umigv

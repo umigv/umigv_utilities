@@ -3,8 +3,6 @@
 
 // utilities relating to ROS
 
-namespace umigv {
-
 #include "umigv_utilities/exceptions.hpp"
 #include "umigv_utilities/traits.hpp"
 
@@ -56,11 +54,11 @@ class ParameterServer {
 public:
     template <
         typename ...Ts,
-        std::enable_if_t<std::is_constructible_v<ros::NodeHandle, Ts...>,
+        std::enable_if_t<std::is_constructible<ros::NodeHandle, Ts...>::value,
                          int> = 0
     >
     ParameterServer(const bool should_cache, Ts &&...args)
-    noexcept(std::is_nothrow_constructible_v<)
+    noexcept(std::is_nothrow_constructible<ros::NodeHandle, Ts...>::value)
     : node_(std::forward<Ts>(args)...), should_cache_{ should_cache } { }
 
     constexpr void enable_caching() noexcept {
@@ -100,11 +98,6 @@ public:
         }
 
         return { std::move(parameter) };
-    }
-
-    template <typename T, std::enable_if_t<is_rosparam_v<T>, int> = 0>
-    boost::optional<T> operator[](const std::string &key) const {
-        return get_parameter<T>(key);
     }
 
 private:
