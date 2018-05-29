@@ -3,10 +3,10 @@
 
 // utility header; useful but otherwise ungrouped functions
 
-#include <ros/ros.h> // ros::shutdown, ros::waitForShutdown
+#include "umigv_utilties/ros.hpp"
 
-#include <cstdlib> // std::exit, EXIT_FAILURE
-#include <type_traits> // std::enable_if_t
+#include <iterator>
+#include <type_traits>
 
 namespace umigv {
 
@@ -26,26 +26,19 @@ constexpr const To& byte_cast(const From &from) noexcept {
     return *reinterpret_cast<const To*>(&from);
 }
 
-[[noreturn]] inline void blocking_shutdown() noexcept {
-    ros::shutdown();
-    ros::waitForShutdown();
-    std::exit(EXIT_FAILURE);
-}
-
 template <typename T>
-decltype(auto) adl_begin(T &&t) {
+constexpr decltype(auto) adl_begin(T &&t) {
     using std::begin;
 
     return begin(std::forward<T>(t));
 }
 
 template <typename T>
-decltype(auto) adl_end(T &&t) {
+constexpr decltype(auto) adl_end(T &&t) {
     using std::end;
 
     return end(std::forward<T>(t));
 }
-
 
 } // namespace umigv
 
