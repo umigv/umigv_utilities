@@ -5,10 +5,8 @@
 // (e.g. a function pointer, lambda, functor), will return the result of calling
 // the function on the object
 
-#include "types.hpp" // umigv::isize
-
-#include "detail/invoke.hpp" // umigv::detail::invoke,
-                             // umigv::detail::InvokeResultT
+#include "umigv_utilities/types.hpp"
+#include "umigv_utilities/invoke.hpp"
 
 #include <iterator> // std::begin, std::end, std::iterator_traits
 #include <type_traits> // std::common_type_t
@@ -19,7 +17,7 @@ namespace umigv {
 template <typename It, typename Function>
 class MappedRange {
     using DereferenceT = decltype((*std::declval<It>()));
-    using ReturnT = detail::InvokeResultT<Function, DereferenceT>;
+    using ReturnT = invoke_result_t<Function, DereferenceT>;
 
 public:
     class Iterator {
@@ -38,10 +36,8 @@ public:
         }
 
         reference operator*() const
-            noexcept(noexcept(detail::invoke(std::declval<Function>(),
-                                             *std::declval<It>())))
-        {
-            return detail::invoke(function_, *current_);
+        noexcept(is_nothrow_invocable_v<Function, iterator_reference_t<It>>) {
+            return invoke(function_, *current_);
         }
 
         friend bool operator==(const Iterator lhs, const Iterator rhs)
