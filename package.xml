@@ -1,6 +1,6 @@
 <package format="2">
     <name>umigv_utilities</name>
-    <version>0.1.0</version>
+    <version>0.2.0</version>
     <description>Header-only utilities library.</description>
     <maintainer email="gregjm@umich.edu">Gregory Meyer</maintainer>
     <license>BSD 3-Clause License</license>
@@ -12,4 +12,6 @@
 
     <depend>phidgets_api</depend>
     <depend>roscpp</depend>
+
+    <build_export_depend>libboost-all-dev</build_export_depend>
 </package>
