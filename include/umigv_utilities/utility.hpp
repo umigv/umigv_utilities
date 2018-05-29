@@ -3,10 +3,12 @@
 
 // utility header; useful but otherwise ungrouped functions
 
-#include "umigv_utilties/ros.hpp"
+#include "umigv_utilities/ros.hpp"
+#include "umigv_utilities/traits.hpp"
 
 #include <iterator>
 #include <type_traits>
+#include <utility>
 
 namespace umigv {
 
@@ -26,20 +28,33 @@ constexpr const To& byte_cast(const From &from) noexcept {
     return *reinterpret_cast<const To*>(&from);
 }
 
-template <typename T>
-constexpr decltype(auto) adl_begin(T &&t) {
-    using std::begin;
+} // namespace umigv
 
+namespace adl {
+
+using std::swap;
+using std::begin;
+using std::end;
+
+template <typename T, std::enable_if_t<umigv::has_begin_v<T>, int> = 0>
+constexpr umigv::begin_result_t<T> begin(T &&t)
+noexcept(umigv::has_nothrow_begin_v<T>) {
     return begin(std::forward<T>(t));
 }
 
-template <typename T>
-constexpr decltype(auto) adl_end(T &&t) {
-    using std::end;
-
+template <typename T, std::enable_if_t<umigv::has_end_v<T>, int> = 0>
+constexpr umigv::end_result_t<T> end(T &&t)
+noexcept(umigv::has_nothrow_end_v<T>) {
     return end(std::forward<T>(t));
 }
 
-} // namespace umigv
+template <typename T, typename U,
+          std::enable_if_t<umigv::is_swappable_with_v<T, U>, int> = 0>
+constexpr void swap(T &&t, U &&u)
+noexcept(umigv::is_nothrow_swappable_with_v<T, U>) {
+    return swap(std::forward<T>(t), std::forward<U>(u));
+}
+
+} // namespace adl
 
 #endif
