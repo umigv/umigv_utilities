@@ -3,160 +3,197 @@
 
 // dereferencing filter returns only elements that evaluate true by a predicate
 
-#include "types.hpp" // umigv::isize
-#include "detail/invoke.hpp" // umigv::detail::invoke
+#include "umigv_utilities/invoke.hpp"
+#include "umigv_utilities/traits.hpp"
+#include "umigv_utilities/types.hpp"
+#include "umigv_utilities/utility.hpp"
 
-#include <iterator> // std::begin, std::end, std::iterator_traits
-#include <type_traits> // std::common_type_t
-#include <utility> // std::forward
+#include <iterator>
+#include <type_traits>
+#include <utility>
 
 namespace umigv {
 
-template <typename It, typename Predicate>
-class FilteredRange {
+template <
+    typename I, typename P,
+    std::enable_if_t<is_iterator_v<I>
+                     && is_invocable_v<P, iterator_reference_t<I>>, int> = 0
+>
+class FilteredRange;
+
+template <
+    typename I, typename P,
+    std::enable_if_t<is_iterator_v<I>
+                     && is_invocable_v<P, iterator_reference_t<I>>, int> = 0
+>
+class FilteredRangeIterator {
 public:
-    class Iterator {
-    public:
-        friend FilteredRange;
+    friend FilteredRange<I, P>;
 
-        using difference_type = isize;
-        using value_type = typename std::iterator_traits<It>::value_type;
-        using pointer = typename std::iterator_traits<It>::pointer;
-        using reference = typename std::iterator_traits<It>::reference;
-        using iterator_category = std::forward_iterator_tag;
+    using difference_type = iterator_difference_type_t<I>;
+    using value_type = iterator_value_type_t<I>;
+    using pointer = iterator_pointer_t<I>;
+    using reference = iterator_reference_t<I>;
+    using iterator_category =
+        std::conditional_t<is_forward_iterator_v<I>
+                           && std::is_default_constructible<P>::value,
+                           std::forward_iterator_tag,
+                           std::input_iterator_tag>;
 
-        Iterator& operator++()
-            noexcept(noexcept(++std::declval<It&>())
-                     and noexcept(std::declval<It>() == std::declval<It>())
-                     and noexcept(detail::invoke(std::declval<Predicate>(),
-                                                 *std::declval<It>())))
-        {
-            while (current_ != end_) {
-                ++current_;
+    constexpr FilteredRangeIterator() = default;
 
-                if (detail::invoke(predicate_, *current_)) {
-                    break;
-                }
-            }
+    constexpr FilteredRangeIterator& operator++()
+    noexcept(noexcept(++current_) && noexcept(validate())) {
+        ++current_;
+        validate();
 
-            return *this;
-        }
-
-        reference operator*() const noexcept(noexcept(*std::declval<It>())) {
-            return *current_;
-        }
-
-        friend bool operator==(const Iterator lhs, const Iterator rhs)
-            noexcept(noexcept(std::declval<It>() == std::declval<It>()))
-        {
-            return lhs.current_ == rhs.current_;
-        }
-
-        friend bool operator!=(const Iterator lhs, const Iterator rhs)
-            noexcept(noexcept(std::declval<It>() != std::declval<It>()))
-        {
-            return lhs.current_ != rhs.current_;
-        }
-
-    private:
-        Iterator(It current, It end, Predicate predicate)
-            noexcept(noexcept(It{ std::move(std::declval<It>()) })
-                     and noexcept(Predicate{
-                        std::move(std::declval<Predicate>())
-                     }))
-            : current_{ std::move(current) }, end_{ std::move(end) },
-              predicate_{ std::move(predicate) }
-        { }
-
-        It current_;
-        It end_;
-        Predicate predicate_;
-    };
-
-    FilteredRange(It begin, It end, Predicate predicate)
-        noexcept(noexcept(It{ std::move(std::declval<It>()) })
-                 and noexcept(Predicate{
-                    std::move(std::declval<Predicate>())
-                 }))
-        : begin_{ std::move(begin) }, end_{ std::move(end) },
-          predicate_{ std::move(predicate) }
-    {
-        while (not detail::invoke(predicate_, *begin_) and begin_ != end_) {
-            ++begin_;
-        }
+        return *this;
     }
 
-    Iterator begin() const
-        noexcept(noexcept(Iterator{ std::declval<It>(), std::declval<It>(),
-                                    std::declval<Predicate>() }))
-    {
-        return Iterator{ begin_, end_, predicate_ };
+    constexpr FilteredRangeIterator operator++(int)
+    noexcept(std::is_nothrow_copy_constructible<I>::value
+             && std::is_nothrow_copy_constructible<P>::value
+             && noexcept(++(*this))) {
+        const FilteredRangeIterator to_return = *this;
+
+        ++(*this);
+
+        return to_return;
     }
 
-    Iterator end() const
-        noexcept(noexcept(Iterator{ std::declval<It>(), std::declval<It>(),
-                                    std::declval<Predicate>() }))
-    {
-        return Iterator{ end_, end_, predicate_ };
+    constexpr reference operator*() const noexcept(noexcept(*current_)) {
+        return *current_;
+    }
+
+    constexpr friend bool operator==(const FilteredRangeIterator lhs,
+                                     const FilteredRangeIterator rhs) {
+        if (lhs.last_ != rhs.last_) {
+            throw std::out_of_range{
+                "operator==(FilteredRangeIterator, FilteredRangeIterator)"
+            };
+        }
+
+        return lhs.current_ == rhs.current_;
+    }
+
+    constexpr friend bool operator!=(const FilteredRangeIterator lhs,
+                                     const FilteredRangeIterator rhs) {
+        return !(lhs == rhs);
     }
 
 private:
-    It begin_;
-    It end_;
-    Predicate predicate_;
+    constexpr FilteredRangeIterator(I current, I last, P predicate)
+    noexcept(std::is_nothrow_move_constructible<I>::value
+             && std::is_nothrow_move_constructible<P>::value
+             && noexcept(validate()))
+    : current_{ std::move(current) }, last_{ std::move(last) },
+      predicate_{ std::move(predicate) } {
+        validate();
+    }
+
+    constexpr void validate()
+    noexcept(is_nothrow_equality_comparable_v<I>
+             && is_nothrow_invocable_v<P, iterator_reference_t<I>>
+             && noexcept(++current_)) {
+        for (; current_ != last_ && !invoke(predicate_, *current_);
+             ++current_) { }
+    }
+
+    I current_;
+    I last_;
+    P predicate_;
 };
 
-template <typename Iterator, typename Predicate>
-typename FilteredRange<Iterator, Predicate>::Iterator
-begin(const FilteredRange<Iterator, Predicate> &range)
-    noexcept(noexcept(
-        std::declval<FilteredRange<Iterator, Predicate>>().begin()
-    ))
-{
+template <
+    typename I, typename P,
+    std::enable_if_t<is_iterator_v<I>
+                     && is_invocable_v<P, iterator_reference_t<I>>, int>
+>
+class FilteredRange {
+public:
+    using iterator = FilteredRangeIterator<I, P>;
+    using difference_type = iterator_difference_type_t<iterator>;
+
+    constexpr FilteredRange(I first, I last, P predicate)
+    noexcept(std::is_nothrow_move_constructible<I>::value
+             && std::is_nothrow_move_constructible<P>::value)
+    : first_{ std::move(first) }, last_{ std::move(last) },
+      predicate_{ std::move(predicate) }
+    { }
+
+    constexpr iterator begin() const
+    noexcept(std::is_nothrow_constructible<iterator, I, I, P>::value
+             && std::is_nothrow_copy_constructible<I>::value
+             && std::is_nothrow_copy_constructible<P>::value) {
+        return { first_, last_, predicate_ };
+    }
+
+    constexpr iterator end() const
+    noexcept(std::is_nothrow_constructible<iterator, I, I, P>::value
+             && std::is_nothrow_copy_constructible<I>::value
+             && std::is_nothrow_copy_constructible<P>::value) {
+        return { last_, last_, predicate_ };
+    }
+
+private:
+    I first_;
+    I last_;
+    P predicate_;
+};
+
+template <typename I, typename P>
+constexpr FilteredRangeIterator<I, P> begin(const FilteredRange<I, P> &range)
+noexcept (has_nothrow_begin_v<FilteredRangeIterator<I, P>>) {
     return range.begin();
 }
 
-template <typename Iterator, typename Predicate>
-typename FilteredRange<Iterator, Predicate>::Iterator
-end(const FilteredRange<Iterator, Predicate> &range)
-    noexcept(noexcept(
-        std::declval<FilteredRange<Iterator, Predicate>>().end()
-    ))
-{
+template <typename I, typename P>
+constexpr FilteredRangeIterator<I, P> end(const FilteredRange<I, P> &range)
+noexcept (has_nothrow_end_v<FilteredRangeIterator<I, P>>) {
     return range.end();
 }
 
-template <typename Range, typename Predicate>
-auto filter(Range &&range, Predicate &&predicate) {
-    using std::begin;
-    using std::end;
+template <
+    typename R, typename P,
+    std::enable_if_t<is_range_v<R>
+                     && is_invocable_v<P, range_reference_t<R>>, int> = 0>
+constexpr FilteredRange<begin_result_t<R>, P> filter(R &&range, P &&predicate)
+noexcept(std::is_nothrow_constructible<
+    FilteredRange<begin_result_t<R>, P>,
+    begin_result_t<R>,
+    end_result_t<R>,
+    P
+>::value) {
+    using RangeT = FilteredRange<begin_result_t<R>, P>;
 
-    using IteratorT = decltype(begin(std::forward<Range>(range)));
-    using RangeT = FilteredRange<IteratorT, Predicate>;
-
-    return RangeT{ begin(std::forward<Range>(range)),
-                   end(std::forward<Range>(range)),
-                   std::forward<Predicate>(predicate) };
+    return RangeT{ ::adl::begin(std::forward<R>(range)),
+                   ::adl::end(std::forward<R>(range)),
+                   std::forward<P>(predicate) };
 }
 
-template <typename T, typename Predicate>
-auto filter(const std::initializer_list<T> list, Predicate &&predicate) {
-    using std::begin;
-    using std::end;
+template <typename T, typename P,
+          std::enable_if_t<is_invocable_v<P, const T&>, int> = 0>
+constexpr FilteredRange<begin_result_t<std::initializer_list<T>>, P>
+filter(const std::initializer_list<T> list, P &&predicate)
+noexcept(std::is_nothrow_constructible<
+    FilteredRange<begin_result_t<std::initializer_list<T>>, P>,
+    begin_result_t<std::initializer_list<T>>,
+    end_result_t<std::initializer_list<T>>,
+    P
+>::value) {
+    using RangeT = FilteredRange<begin_result_t<std::initializer_list<T>>, P>;
 
-    using IteratorT = decltype(begin(list));
-    using RangeT = FilteredRange<IteratorT, Predicate>;
-
-    return RangeT{ begin(list), end(list), std::forward<Predicate>(predicate) };
+    return RangeT{ ::adl::begin(list), ::adl::end(list),
+                   std::forward<P>(predicate) };
 }
 
-template <typename Begin, typename End, typename Predicate,
-          typename = std::common_type_t<Begin, End>>
-auto filter(Begin begin, End end, Predicate &&predicate) {
-    using IteratorT = std::common_type_t<Begin, End>;
-    using RangeT = FilteredRange<IteratorT, Predicate>;
+template <typename I, typename P,
+          std::enable_if_t<is_invocable_v<P, iterator_reference_t<I>>, int> = 0>
+constexpr FilteredRange<I, P> filter(I first, I last, P &&predicate)
+noexcept(std::is_nothrow_constructible<FilteredRange<I, P>, I, I, P>::value) {
+    using RangeT = FilteredRange<I, P>;
 
-    return RangeT{ begin, end, std::forward<Predicate>(predicate) };
+    return RangeT{ first, last, std::forward<P>(predicate) };
 }
 
 } // namespace umigv
