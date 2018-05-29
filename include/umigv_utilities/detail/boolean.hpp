@@ -3,7 +3,7 @@
 
 #include "umigv_utilities/types.hpp" // umigv::usize
 
-#include <utility> // std::forward, std::declval
+#include <utility>
 
 namespace umigv {
 namespace detail {
@@ -22,7 +22,7 @@ constexpr bool boolean_or(bool first) noexcept {
 }
 
 template <typename ...Types>
-constexpr bool boolean_or(bool first, bool second, Types &&...types) {
+constexpr bool boolean_or(bool first, bool second, Types &&...types) noexcept {
     return first or boolean_or(second, std::forward<Types>(types)...);
 }
 
