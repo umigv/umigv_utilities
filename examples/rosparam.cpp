@@ -20,4 +20,7 @@ int main(int argc, char *argv[]) {
 
     const auto names = params.get_names().value();
     const auto covariance = params.get<std::vector<f64>>("covariance").value();
+
+    const auto rate = params["rate"].value<f64>();
+    const auto frequency = params["frequency"].value_or(100.0);
 }
