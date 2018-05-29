@@ -3,8 +3,8 @@
 
 // defines umigv::zip, which takes a variadic number of iterable ranges and zips them together
 
-#include "umigv_utilities/types.hpp" // umigv::isize
-#include "umigv_utilities/detail/boolean.hpp" // umigv::detail::boolean_and, umigv::detail::equal
+#include "umigv_utilities/types.hpp"
+#include "umigv_utilities/detail/boolean.hpp"
 
 #include <type_traits>
 #include <iterator>
