@@ -50,6 +50,25 @@ T get_parameter_or(const ros::NodeHandle &handle, const std::string &name,
     std::exit(EXIT_FAILURE);
 }
 
+class ParameterServer;
+
+class ParameterReference {
+public:
+    friend ParameterServer;
+
+    template <typename T, std::enable_if_t<is_rosparam_v<T>, int> = 0>
+    boost::optional<T> value() const;
+
+    template <typename T, std::enable_if_t<is_rosparam_v<T>, int> = 0>
+    T value_or(const T &fallback = T{ });
+
+private:
+    ParameterReference(const ParameterServer &parent, std::string key) noexcept;
+
+    const ParameterServer *parent_ptr_ = nullptr;
+    std::string key_;
+};
+
 class ParameterServer {
 public:
     template <
@@ -87,23 +106,49 @@ public:
     boost::optional<T> get(const std::string &key) const {
         T parameter;
 
-        if (!has_parameter(key)) {
+        const bool was_fetched = [this, &key, &parameter]() mutable {
+            if (should_cache_) {
+                return node_.getParamCached(key, parameter);
+            }
+
+            return node_.getParam(key, parameter);
+        }();
+
+        if (!was_fetched) {
             return boost::none;
         }
 
-        if (should_cache_) {
-            node_.getParamCached(key, parameter);
-        } else {
-            node_.getParam(key, parameter);
-        }
-
         return { std::move(parameter) };
+    }
+
+    ParameterReference operator[](std::string key) const {
+        return { *this, std::move(key) };
     }
 
 private:
     ros::NodeHandle node_;
     bool should_cache_ = false;
 };
+
+template <typename T, std::enable_if_t<is_rosparam_v<T>, int>>
+boost::optional<T> ParameterReference::value() const {
+    return parent_ptr_->get<T>(key_);
+}
+
+template <typename T, std::enable_if_t<is_rosparam_v<T>, int>>
+T ParameterReference::value_or(const T &fallback) {
+    const boost::optional<T> maybe_value = value<T>();
+
+    if (maybe_value) {
+        return std::move(maybe_value.value());
+    }
+
+    return fallback;
+}
+
+ParameterReference::ParameterReference(const ParameterServer &parent,
+                                       std::string key) noexcept
+: parent_ptr_{ &parent }, key_{ std::move(key) } { }
 
 } // namespace umigv
 
