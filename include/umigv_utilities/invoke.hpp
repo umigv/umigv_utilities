@@ -58,7 +58,7 @@ noexcept(noexcept(
 
 template <typename T>
 using tuple_index_sequence =
-    std::make_index_sequence<std::tuple_size<T>::value>;
+    std::make_index_sequence<tuple_size_v<T>>;
 
 template <typename F, typename ArgTuple, typename = void>
 struct is_invocable : std::false_type { };

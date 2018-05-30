@@ -3,8 +3,11 @@
 
 // type traits header; defines custom type traits
 
+#include "umigv_utilities/types.hpp"
+
 #include <iterator>
 #include <map>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -475,6 +478,38 @@ struct is_nothrow_less_than_comparable
 template <typename T>
 constexpr bool is_nothrow_less_than_comparable_v =
     is_nothrow_less_than_comparable<T>::value;
+
+template <typename T>
+struct tuple_size : std::tuple_size<std::remove_reference_t<T>> { };
+
+template <typename T>
+constexpr usize tuple_size_v = tuple_size<T>::value;
+
+template <typename...>
+struct conjunction : std::true_type { };
+
+template <typename T>
+struct conjunction<T> : T { };
+
+template <typename T, typename ...Ts>
+struct conjunction<T, Ts...>
+: std::conditional_t<static_cast<bool>(T::value), conjunction<Ts...>, T> { };
+
+template <typename ...Ts>
+constexpr bool conjunction_v = conjunction<Ts...>::value;
+
+template <typename...>
+struct disjunction : std::false_type { };
+
+template <class T>
+struct disjunction<T> : T { };
+
+template <class T, class... Ts>
+struct disjunction<T, Ts...>
+: std::conditional_t<static_cast<bool>(T::value), T, disjunction<Ts...>> { };
+
+template <typename ...Ts>
+constexpr bool disjunction_v = disjunction<Ts...>::value;
 
 } // namespace umigv
 
