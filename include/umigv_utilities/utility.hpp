@@ -3,7 +3,7 @@
 
 // utility header; useful but otherwise ungrouped functions
 
-#include "umigv_utilties/ros.hpp"
+#include "umigv_utilities/ros.hpp"
 
 #include <iterator>
 #include <type_traits>
