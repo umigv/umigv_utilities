@@ -43,7 +43,8 @@ public:
     constexpr FilteredRangeIterator() = default;
 
     constexpr FilteredRangeIterator& operator++()
-    noexcept(noexcept(++current_) && noexcept(validate())) {
+    noexcept(noexcept(++std::declval<I&>())
+             && noexcept(std::declval<FilteredRangeIterator&>().validate())) {
         ++current_;
         validate();
 
@@ -53,7 +54,7 @@ public:
     constexpr FilteredRangeIterator operator++(int)
     noexcept(std::is_nothrow_copy_constructible<I>::value
              && std::is_nothrow_copy_constructible<P>::value
-             && noexcept(++(*this))) {
+             && noexcept(++std::declval<FilteredRangeIterator&>())) {
         const FilteredRangeIterator to_return = *this;
 
         ++(*this);
@@ -61,7 +62,8 @@ public:
         return to_return;
     }
 
-    constexpr reference operator*() const noexcept(noexcept(*current_)) {
+    constexpr reference operator*() const
+    noexcept(noexcept(*std::declval<const I&>())) {
         return *current_;
     }
 
@@ -85,7 +87,7 @@ private:
     constexpr FilteredRangeIterator(I current, I last, P predicate)
     noexcept(std::is_nothrow_move_constructible<I>::value
              && std::is_nothrow_move_constructible<P>::value
-             && noexcept(validate()))
+             && noexcept(std::declval<FilteredRangeIterator&>().validate()))
     : current_{ std::move(current) }, last_{ std::move(last) },
       predicate_{ std::move(predicate) } {
         validate();
@@ -94,7 +96,7 @@ private:
     constexpr void validate()
     noexcept(is_nothrow_equality_comparable_v<I>
              && is_nothrow_invocable_v<P, iterator_reference_t<I>>
-             && noexcept(++current_)) {
+             && noexcept(++std::declval<I&>())) {
         for (; current_ != last_ && !invoke(predicate_, *current_);
              ++current_) { }
     }
