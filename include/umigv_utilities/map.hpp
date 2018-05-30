@@ -54,12 +54,9 @@ public:
 
     private:
         Iterator(It current, Function function)
-            noexcept(
-                noexcept(It{ std::move(std::declval<It>()) })
-                and noexcept(Function{ std::move(std::declval<Function>()) })
-            ) : current_{ std::move(current) },
-                function_{ std::move(function) }
-        { }
+        noexcept(std::is_nothrow_move_constructible<It>::value
+                 && std::is_nothrow_move_constructible<Function>::value)
+        : current_{ std::move(current) }, function_{ std::move(function) }  { }
 
         It current_;
         Function function_;
