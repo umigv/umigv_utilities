@@ -80,11 +80,11 @@ public:
     noexcept(std::is_nothrow_constructible<ros::NodeHandle, Ts...>::value)
     : node_(std::forward<Ts>(args)...), should_cache_{ should_cache } { }
 
-    constexpr void enable_caching() noexcept {
+    void enable_caching() noexcept {
         should_cache_ = true;
     }
 
-    constexpr void disable_caching() noexcept {
+    void disable_caching() noexcept {
         should_cache_ = false;
     }
 
