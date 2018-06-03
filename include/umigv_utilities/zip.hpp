@@ -149,10 +149,11 @@ end(const ZippedRange<IteratorTuple, Is...> &range)
     return range.end();
 }
 
+namespace detail {
+
 template <typename BeginTuple, typename EndTuple,
           typename = std::common_type_t<BeginTuple, EndTuple>, usize ...Is>
-auto zip_impl(BeginTuple &&begins, EndTuple &&ends,
-              std::index_sequence<Is...>) {
+auto zip(BeginTuple &&begins, EndTuple &&ends, std::index_sequence<Is...>) {
     using IteratorTupleT = std::common_type_t<BeginTuple, EndTuple>;
     using RangeT = ZippedRange<IteratorTupleT, Is...>;
 
@@ -160,14 +161,16 @@ auto zip_impl(BeginTuple &&begins, EndTuple &&ends,
                    std::forward<EndTuple>(ends) };
 }
 
-template <typename ...Ranges>
-auto zip(Ranges &&...ranges) {
-    using std::begin;
-    using std::end;
+} // namespace detail
 
-    return zip_impl(std::make_tuple(begin(std::forward<Ranges>(ranges))...),
-                    std::make_tuple(end(std::forward<Ranges>(ranges))...),
-                    std::index_sequence_for<Ranges...>{ });
+template <typename ...Rs>
+auto zip(Rs &&...ranges) noexcept(conjunction_v<has_nothrow_begin<Rs>...>
+                                  && conjunction_v<has_nothrow_end<Rs>...>) {
+    return detail::zip(
+        std::make_tuple(adl_begin(std::forward<Rs>(ranges))...),
+        std::make_tuple(adl_end(std::forward<Rs>(ranges))...),
+        std::index_sequence_for<Rs...>{ }
+    );
 }
 
 } // namespace umigv
