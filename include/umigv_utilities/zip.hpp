@@ -51,7 +51,11 @@ public:
             throw std::out_of_range{ "ZippedRangeIterator::operator++" };
         }
 
-        int unused[] = { (++std::get<Is>(current_), 0)... };
+        auto increment = [](auto &&x) {
+            ++std::forward<decltype(x)>(x);
+        };
+
+        unary_fold(std::move(increment), std::get<Is>(current_)...);
 
         return *this;
     }
