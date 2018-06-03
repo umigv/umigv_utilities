@@ -336,14 +336,19 @@ struct end_result : umigv_detail_adl::end_result<T> { };
 template <typename T>
 using end_result_t = typename end_result<T>::type;
 
-template <typename T,
-          bool = has_begin_v<T> && has_end_v<T>>
+template <typename T, typename = void>
+          // bool = has_begin_v<T> && has_end_v<T>>
 struct is_range : std::false_type { };
 
 template <typename T>
-struct is_range<T, true>
-: true_type_if_t<std::is_same<begin_result_t<T>, end_result_t<T>>::value
-                 && is_iterator_v<begin_result_t<T>>> { };
+struct is_range<
+    T,
+    void_t<std::enable_if_t<
+        has_begin_v<T> && has_end_v<T>
+        && std::is_same<begin_result_t<T>, end_result_t<T>>::value
+        && is_iterator_v<begin_result_t<T>>
+    >>
+> : std::true_type { };
 
 template <typename T>
 constexpr bool is_range_v = is_range<T>::value;
