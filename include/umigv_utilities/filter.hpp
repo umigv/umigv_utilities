@@ -34,13 +34,18 @@ public:
     using value_type = iterator_value_type_t<I>;
     using pointer = iterator_pointer_t<I>;
     using reference = iterator_reference_t<I>;
-    using iterator_category =
-        std::conditional_t<is_forward_iterator_v<I>
-                           && std::is_default_constructible<P>::value,
-                           std::forward_iterator_tag,
-                           std::input_iterator_tag>;
+    using iterator_category = std::input_iterator_tag;
 
-    constexpr FilteredRangeIterator() = default;
+    constexpr FilteredRangeIterator(const FilteredRangeIterator &other)
+    noexcept(std::is_nothrow_copy_constructible<I>::value)
+    : current_{ other.current_ }, last_{ other.last_ },
+      predicate_{ std::forward<P>(other.predicate_) } { }
+
+    constexpr FilteredRangeIterator(FilteredRangeIterator &&other)
+    noexcept(std::is_nothrow_move_constructible<I>::value)
+    : current_{ std::move(other.current_) },
+      last_{ std::move(other.last_) },
+      predicate_{ std::forward<P>(other.predicate_) } { }
 
     constexpr FilteredRangeIterator& operator++()
     noexcept(noexcept(++std::declval<I&>())
@@ -67,8 +72,8 @@ public:
         return *current_;
     }
 
-    constexpr friend bool operator==(const FilteredRangeIterator lhs,
-                                     const FilteredRangeIterator rhs) {
+    constexpr friend bool operator==(const FilteredRangeIterator &lhs,
+                                     const FilteredRangeIterator &rhs) {
         if (lhs.last_ != rhs.last_) {
             throw std::out_of_range{
                 "operator==(FilteredRangeIterator, FilteredRangeIterator)"
@@ -78,18 +83,17 @@ public:
         return lhs.current_ == rhs.current_;
     }
 
-    constexpr friend bool operator!=(const FilteredRangeIterator lhs,
-                                     const FilteredRangeIterator rhs) {
+    constexpr friend bool operator!=(const FilteredRangeIterator &lhs,
+                                     const FilteredRangeIterator &rhs) {
         return !(lhs == rhs);
     }
 
 private:
-    constexpr FilteredRangeIterator(I current, I last, P predicate)
+    constexpr FilteredRangeIterator(I current, I last, P &&predicate)
     noexcept(std::is_nothrow_move_constructible<I>::value
-             && std::is_nothrow_move_constructible<P>::value
              && noexcept(std::declval<FilteredRangeIterator&>().validate()))
     : current_{ std::move(current) }, last_{ std::move(last) },
-      predicate_{ std::move(predicate) } {
+      predicate_{ std::forward<P>(predicate) } {
         validate();
     }
 
@@ -97,13 +101,14 @@ private:
     noexcept(is_nothrow_equality_comparable_v<I>
              && is_nothrow_invocable_v<P, iterator_reference_t<I>>
              && noexcept(++std::declval<I&>())) {
-        for (; current_ != last_ && !invoke(predicate_, *current_);
+        for (; !(current_ == last_) && !invoke(std::forward<P>(predicate_),
+                                               *current_);
              ++current_) { }
     }
 
     I current_;
     I last_;
-    P predicate_;
+    P &&predicate_;
 };
 
 template <
@@ -116,31 +121,28 @@ public:
     using iterator = FilteredRangeIterator<I, P>;
     using difference_type = iterator_difference_type_t<iterator>;
 
-    constexpr FilteredRange(I first, I last, P predicate)
-    noexcept(std::is_nothrow_move_constructible<I>::value
-             && std::is_nothrow_move_constructible<P>::value)
+    constexpr FilteredRange(I first, I last, P &&predicate)
+    noexcept(std::is_nothrow_move_constructible<I>::value)
     : first_{ std::move(first) }, last_{ std::move(last) },
-      predicate_{ std::move(predicate) }
+      predicate_{ std::forward<P>(predicate) }
     { }
 
     constexpr iterator begin() const
     noexcept(std::is_nothrow_constructible<iterator, I, I, P>::value
-             && std::is_nothrow_copy_constructible<I>::value
-             && std::is_nothrow_copy_constructible<P>::value) {
-        return { first_, last_, predicate_ };
+             && std::is_nothrow_copy_constructible<I>::value) {
+        return { first_, last_, std::forward<P>(predicate_) };
     }
 
     constexpr iterator end() const
     noexcept(std::is_nothrow_constructible<iterator, I, I, P>::value
-             && std::is_nothrow_copy_constructible<I>::value
-             && std::is_nothrow_copy_constructible<P>::value) {
-        return { last_, last_, predicate_ };
+             && std::is_nothrow_copy_constructible<I>::value) {
+        return { last_, last_, std::forward<P>(predicate_) };
     }
 
 private:
     I first_;
     I last_;
-    P predicate_;
+    P &&predicate_;
 };
 
 template <typename I, typename P>
@@ -168,8 +170,8 @@ noexcept(std::is_nothrow_constructible<
 >::value) {
     using RangeT = FilteredRange<begin_result_t<R>, P>;
 
-    return RangeT{ ::adl::begin(std::forward<R>(range)),
-                   ::adl::end(std::forward<R>(range)),
+    return RangeT{ adl_begin(std::forward<R>(range)),
+                   adl_end(std::forward<R>(range)),
                    std::forward<P>(predicate) };
 }
 
@@ -185,17 +187,8 @@ noexcept(std::is_nothrow_constructible<
 >::value) {
     using RangeT = FilteredRange<begin_result_t<std::initializer_list<T>>, P>;
 
-    return RangeT{ ::adl::begin(list), ::adl::end(list),
+    return RangeT{ adl_begin(list), adl_end(list),
                    std::forward<P>(predicate) };
-}
-
-template <typename I, typename P,
-          std::enable_if_t<is_invocable_v<P, iterator_reference_t<I>>, int> = 0>
-constexpr FilteredRange<I, P> filter(I first, I last, P &&predicate)
-noexcept(std::is_nothrow_constructible<FilteredRange<I, P>, I, I, P>::value) {
-    using RangeT = FilteredRange<I, P>;
-
-    return RangeT{ first, last, std::forward<P>(predicate) };
 }
 
 } // namespace umigv
