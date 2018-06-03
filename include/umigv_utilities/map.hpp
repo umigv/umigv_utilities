@@ -20,7 +20,7 @@ template <
     typename I, typename C,
     std::enable_if_t<
         is_input_iterator_v<I>
-        && is_invocable_v<const C&, iterator_reference_t<I>>, int
+        && is_invocable_v<C, iterator_reference_t<I>>, int
     > = 0
 >
 class MappedRange;
@@ -29,19 +29,29 @@ template <
     typename I, typename C,
     std::enable_if_t<
         is_input_iterator_v<I>
-        && is_invocable_v<const C&, iterator_reference_t<I>>, int
+        && is_invocable_v<C, iterator_reference_t<I>>, int
     > = 0
 >
 class MappedRangeIterator {
 public:
+    friend MappedRange<I, C>;
+
     using difference_type = isize;
-    using value_type = std::decay_t<invoke_result_t<const C&, iterator_reference_t<I>>>;
+    using value_type =
+        std::decay_t<invoke_result_t<C, iterator_reference_t<I>>>;
     using pointer = const value_type*;
-    using reference = invoke_result_t<const C&, iterator_reference_t<I>>;
-    using iterator_category =
-        std::conditional_t<is_forward_iterator_v<I>
-                           && std::is_default_constructible<C>::value,
-                           std::forward_iterator_tag, std::input_iterator_tag>;
+    using reference = invoke_result_t<C, iterator_reference_t<I>>;
+    using iterator_category = std::input_iterator_tag;
+
+    constexpr MappedRangeIterator(const MappedRangeIterator &other)
+    noexcept(std::is_nothrow_copy_constructible<I>::value)
+    : current_{ other.current_ }, last_{ other.last_ },
+      callable_{ std::forward<C>(other.callable_) } { }
+
+    constexpr MappedRangeIterator(MappedRangeIterator &&other)
+    noexcept(std::is_nothrow_copy_constructible<I>::value)
+    : current_{ std::move(other.current_) }, last_{ std::move(other.last_) },
+      callable_{ std::forward<C>(other.callable_) } { }
 
     constexpr MappedRangeIterator& operator++() {
         if (current_ == last_) {
@@ -58,12 +68,12 @@ public:
             throw std::out_of_range{ "MappedRangeIterator::operator*" };
         }
 
-        return invoke(callable_, *current_);
+        return invoke(std::forward<C>(callable_), *current_);
     }
 
     constexpr friend bool operator==(const MappedRangeIterator &lhs,
                                      const MappedRangeIterator &rhs) {
-        if (lhs.last_ == rhs.last_) {
+        if (lhs.last_ != rhs.last_) {
             throw std::out_of_range{
                 "operator==(const MappedRangeIterator&, "
                 "const MappedRangeIterator&)"
@@ -79,24 +89,22 @@ public:
     }
 
 private:
-    friend MappedRange<I, C>;
-
-    constexpr MappedRangeIterator(I current, I last,  C callable)
+    constexpr MappedRangeIterator(I current, I last, C &&callable)
     noexcept(std::is_nothrow_move_constructible<I>::value
              && std::is_nothrow_move_constructible<C>::value)
     : current_{ std::move(current) }, last_{ std::move(last) },
-      callable_{ std::move(callable) } { }
+      callable_{ std::forward<C>(callable) } { }
 
     I current_;
     I last_;
-    C callable_;
+    C &&callable_;
 };
 
 template <
     typename I, typename C,
     std::enable_if_t<
         is_input_iterator_v<I>
-        && is_invocable_v<const C&, iterator_reference_t<I>>, int
+        && is_invocable_v<C, iterator_reference_t<I>>, int
     >
 >
 class MappedRange {
@@ -104,25 +112,25 @@ public:
     using iterator = MappedRangeIterator<I, C>;
     using difference_type = iterator_difference_type_t<iterator>;
 
-    MappedRange(I first, I last, C callable)
+    MappedRange(I first, I last, C &&callable)
         : first_{ std::move(first) }, last_{ std::move(last) },
-          callable_{ std::move(callable) }
+          callable_{ std::forward<C>(callable) }
     { }
 
     iterator begin() const
     noexcept(std::is_nothrow_constructible<iterator, I, I, C>::value) {
-        return iterator{ first_, last_, callable_ };
+        return iterator{ first_, last_, std::forward<C>(callable_) };
     }
 
     iterator end() const
     noexcept(std::is_nothrow_constructible<iterator, I, I, C>::value) {
-        return iterator{ last_, last_, callable_ };
+        return iterator{ last_, last_, std::forward<C>(callable_) };
     }
 
 private:
     I first_;
     I last_;
-    C callable_;
+    C &&callable_;
 };
 
 template <typename Iterator, typename Function>
@@ -145,35 +153,22 @@ end(const MappedRange<Iterator, Function> &range)
     return range.end();
 }
 
-template <typename Range, typename Function,
-          std::enable_if_t<is_range_v<Range>, int> = 0>
-auto map(Range &&range, Function &&function) {
-    using IteratorT = begin_result_t<Range>;
-    using RangeT = MappedRange<IteratorT, Function>;
+template <typename R, typename C,
+          std::enable_if_t<is_range_v<R>, int> = 0>
+auto map(R &&range, C &&callable) {
+    using RangeT = MappedRange<begin_result_t<R>, C>;
 
-    return RangeT{ ::adl::begin(std::forward<Range>(range)),
-                   ::adl::end(std::forward<Range>(range)),
-                   std::forward<Function>(function) };
+    return RangeT{ adl_begin(std::forward<R>(range)),
+                   adl_end(std::forward<R>(range)),
+                   std::forward<C>(callable) };
 }
 
-template <typename Begin, typename End, typename Function,
-          typename = std::common_type_t<Begin, End>>
-auto map(Begin begin, End end, Function &&function) {
-    using IteratorT = std::common_type_t<Begin, End>;
-    using RangeT = MappedRange<IteratorT, Function>;
+template <typename T, typename C>
+auto map(const std::initializer_list<T> list, C &&callable) {
+    using RangeT = MappedRange<typename std::initializer_list<T>::iterator, C>;
 
-    return RangeT{ begin, end, std::forward<Function>(function) };
-}
-
-template <typename T, typename Function>
-auto map(const std::initializer_list<T> list, Function &&function) {
-    using std::begin;
-    using std::end;
-
-    using IteratorT = decltype(begin(list));
-    using RangeT = MappedRange<IteratorT, Function>;
-
-    return RangeT{ begin(list), end(list), std::forward<Function>(function) };
+    return RangeT{ adl_begin(list), adl_end(list),
+                   std::forward<C>(callable) };
 }
 
 } // namespace umigv
