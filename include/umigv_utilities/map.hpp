@@ -7,6 +7,8 @@
 
 #include "umigv_utilities/types.hpp"
 #include "umigv_utilities/invoke.hpp"
+#include "umigv_utilities/traits.hpp"
+#include "umigv_utilities/utility.hpp"
 
 #include <iterator> // std::begin, std::end, std::iterator_traits
 #include <type_traits> // std::common_type_t
@@ -14,78 +16,113 @@
 
 namespace umigv {
 
-template <typename It, typename Function>
-class MappedRange {
-    using DereferenceT = decltype((*std::declval<It>()));
-    using ReturnT = invoke_result_t<Function, DereferenceT>;
+template <
+    typename I, typename C,
+    std::enable_if_t<
+        is_input_iterator_v<I>
+        && is_invocable_v<const C&, iterator_reference_t<I>>, int
+    > = 0
+>
+class MappedRange;
 
+template <
+    typename I, typename C,
+    std::enable_if_t<
+        is_input_iterator_v<I>
+        && is_invocable_v<const C&, iterator_reference_t<I>>, int
+    > = 0
+>
+class MappedRangeIterator {
 public:
-    class Iterator {
-    public:
-        friend MappedRange;
+    using difference_type = isize;
+    using value_type = std::decay_t<invoke_result_t<const C&, iterator_reference_t<I>>>;
+    using pointer = const value_type*;
+    using reference = invoke_result_t<const C&, iterator_reference_t<I>>;
+    using iterator_category =
+        std::conditional_t<is_forward_iterator_v<I>
+                           && std::is_default_constructible<C>::value,
+                           std::forward_iterator_tag, std::input_iterator_tag>;
 
-        using difference_type = isize;
-        using value_type = typename std::decay<ReturnT>::type;
-        using pointer = const value_type*;
-        using reference = ReturnT;
-        using iterator_category = std::forward_iterator_tag;
-
-        Iterator& operator++() noexcept(noexcept(++std::declval<It&>())) {
-            ++current_;
-            return *this;
+    constexpr MappedRangeIterator& operator++() {
+        if (current_ == last_) {
+            throw std::out_of_range{ "MappedRangeIterator::operator++" };
         }
 
-        reference operator*() const
-        noexcept(is_nothrow_invocable_v<Function, iterator_reference_t<It>>) {
-            return invoke(function_, *current_);
-        }
+        ++current_;
 
-        friend bool operator==(const Iterator lhs, const Iterator rhs)
-            noexcept(noexcept(std::declval<It>() == std::declval<It>()))
-        {
-            return lhs.current_ == rhs.current_;
-        }
-
-        friend bool operator!=(const Iterator lhs, const Iterator rhs)
-            noexcept(noexcept(std::declval<It>() != std::declval<It>()))
-        {
-            return lhs.current_ != rhs.current_;
-        }
-
-    private:
-        Iterator(It current, Function function)
-        noexcept(std::is_nothrow_move_constructible<It>::value
-                 && std::is_nothrow_move_constructible<Function>::value)
-        : current_{ std::move(current) }, function_{ std::move(function) }  { }
-
-        It current_;
-        Function function_;
-    };
-
-    template <typename F>
-    MappedRange(It begin, It end, F &&f)
-        : begin_{ std::move(begin) }, end_{ std::move(end) },
-          function_{ std::forward<F>(f) }
-    { }
-
-    Iterator begin() const
-        noexcept(noexcept(Iterator{ std::declval<It>(),
-                                    std::declval<Function>() }))
-    {
-        return Iterator{ begin_, function_ };
+        return *this;
     }
 
-    Iterator end() const
-        noexcept(noexcept(Iterator{ std::declval<It>(),
-                                    std::declval<Function>() }))
-    {
-        return Iterator{ end_, function_ };
+    constexpr reference operator*() const {
+        if (current_ == last_) {
+            throw std::out_of_range{ "MappedRangeIterator::operator*" };
+        }
+
+        return invoke(callable_, *current_);
+    }
+
+    constexpr friend bool operator==(const MappedRangeIterator &lhs,
+                                     const MappedRangeIterator &rhs) {
+        if (lhs.last_ == rhs.last_) {
+            throw std::out_of_range{
+                "operator==(const MappedRangeIterator&, "
+                "const MappedRangeIterator&)"
+            };
+        }
+
+        return lhs.current_ == rhs.current_;
+    }
+
+    constexpr friend bool operator!=(const MappedRangeIterator &lhs,
+                                     const MappedRangeIterator &rhs) {
+        return !(lhs == rhs);
     }
 
 private:
-    It begin_;
-    It end_;
-    Function function_;
+    friend MappedRange<I, C>;
+
+    constexpr MappedRangeIterator(I current, I last,  C callable)
+    noexcept(std::is_nothrow_move_constructible<I>::value
+             && std::is_nothrow_move_constructible<C>::value)
+    : current_{ std::move(current) }, last_{ std::move(last) },
+      callable_{ std::move(callable) } { }
+
+    I current_;
+    I last_;
+    C callable_;
+};
+
+template <
+    typename I, typename C,
+    std::enable_if_t<
+        is_input_iterator_v<I>
+        && is_invocable_v<const C&, iterator_reference_t<I>>, int
+    >
+>
+class MappedRange {
+public:
+    using iterator = MappedRangeIterator<I, C>;
+    using difference_type = iterator_difference_type_t<iterator>;
+
+    MappedRange(I first, I last, C callable)
+        : first_{ std::move(first) }, last_{ std::move(last) },
+          callable_{ std::move(callable) }
+    { }
+
+    iterator begin() const
+    noexcept(std::is_nothrow_constructible<iterator, I, I, C>::value) {
+        return iterator{ first_, last_, callable_ };
+    }
+
+    iterator end() const
+    noexcept(std::is_nothrow_constructible<iterator, I, I, C>::value) {
+        return iterator{ last_, last_, callable_ };
+    }
+
+private:
+    I first_;
+    I last_;
+    C callable_;
 };
 
 template <typename Iterator, typename Function>
@@ -108,16 +145,14 @@ end(const MappedRange<Iterator, Function> &range)
     return range.end();
 }
 
-template <typename Range, typename Function>
+template <typename Range, typename Function,
+          std::enable_if_t<is_range_v<Range>, int> = 0>
 auto map(Range &&range, Function &&function) {
-    using std::begin;
-    using std::end;
-
-    using IteratorT = decltype(begin(std::forward<Range>(range)));
+    using IteratorT = begin_result_t<Range>;
     using RangeT = MappedRange<IteratorT, Function>;
 
-    return RangeT{ begin(std::forward<Range>(range)),
-                   end(std::forward<Range>(range)),
+    return RangeT{ ::adl::begin(std::forward<Range>(range)),
+                   ::adl::end(std::forward<Range>(range)),
                    std::forward<Function>(function) };
 }
 

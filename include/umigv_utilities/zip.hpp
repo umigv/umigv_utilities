@@ -51,11 +51,7 @@ public:
             throw std::out_of_range{ "ZippedRangeIterator::operator++" };
         }
 
-        auto increment_op = [](auto &&x) {
-            return ++std::forward<decltype(x)>(x);
-        };
-
-        unary_fold(increment_op, std::get<Is>(current_)...);
+        int unused[] = { (++std::get<Is>(current_), 0)... };
 
         return *this;
     }
@@ -99,17 +95,7 @@ private:
     noexcept(conjunction_v<is_nothrow_equality_comparable<
         std::tuple_element_t<Is, value_type>
     >...>) {
-        const auto equal_op = [](auto &&lhs, auto &&rhs) -> decltype(auto) {
-            return std::forward<decltype(lhs)>(lhs)
-                   == std::forward<decltype(rhs)>(rhs);
-        };
-
-        const auto or_op = [](auto &&lhs, auto &&rhs) -> decltype(auto) {
-            return std::forward<decltype(lhs)>(lhs)
-                   || std::forward<decltype(rhs)>(rhs);
-        };
-
-        return binary_fold_pairs(or_op, equal_op, current_, last_);
+        return boolean_or((std::get<Is>(current_) == std::get<Is>(last_))...);
     }
 
     Iterators current_;
