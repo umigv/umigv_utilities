@@ -35,7 +35,7 @@ void map_enumerate_test() {
     };
 
     // y[n] = n * (x[n] - x[n - 1])
-    for (auto &&i : umigv::map(umigv::enumerate<f64>(x), std::move(filter))) {
+    for (auto &&i : umigv::map(umigv::enumerate<f64>(x), filter)) {
         y.push_back(i);
     }
 
@@ -79,6 +79,8 @@ void map_filter_test() {
     std::istream_iterator<std::string> begin{ std::cin };
     std::istream_iterator<std::string> end;
 
+    auto &&range = umigv::iterator_range(std::move(begin), std::move(end));
+
     auto is_valid_number = [](const std::string &maybe_number) {
         try {
             __attribute__((unused)) const f64 num = std::stod(maybe_number);
@@ -92,8 +94,7 @@ void map_filter_test() {
         return std::pair<usize, const std::string&>{ number.size(), number };
     };
 
-    for (auto &&pair : umigv::map(umigv::filter(std::move(begin),
-                                                std::move(end),
+    for (auto &&pair : umigv::map(umigv::filter(range,
                                                 std::move(is_valid_number)),
                                   std::move(string_and_size))) {
         const usize length = pair.first;
@@ -114,7 +115,7 @@ void map_zip_test() {
     // two vectors of eight random real numbers
     std::vector<f64> x(8);
     std::vector<f64> y(x.size());
-
+    
     for (auto &&pair : umigv::zip(x, y)) {
         f64 &first = std::get<0>(pair);
         f64 &second = std::get<1>(pair);
