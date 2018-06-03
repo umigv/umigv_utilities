@@ -4,6 +4,7 @@
 // utilities relating to ROS
 
 #include "umigv_utilities/exceptions.hpp"
+#include "umigv_utilities/invoke.hpp"
 #include "umigv_utilities/traits.hpp"
 
 #include <cstdlib>
@@ -61,6 +62,18 @@ public:
 
     template <typename T, std::enable_if_t<is_rosparam_v<T>, int> = 0>
     T value_or(const T &fallback = T{ });
+
+    template <
+        typename T, typename C,
+        std::enable_if_t<
+            is_rosparam_v<T> && is_invocable_v<C>
+            && std::is_convertible<invoke_result_t<C>, T>::value, int
+        > = 0
+    >
+    T value_or_eval(C &&callable);
+
+    template <typename T, std::enable_if_t<is_rosparam_v<T>, int> = 0>
+    T value_or_throw();
 
 private:
     ParameterReference(const ParameterServer &parent, std::string key) noexcept;
@@ -140,10 +153,41 @@ T ParameterReference::value_or(const T &fallback) {
     const boost::optional<T> maybe_value = value<T>();
 
     if (maybe_value) {
+        // no NRVO with subobjects
         return std::move(maybe_value.value());
     }
 
     return fallback;
+}
+
+template <
+    typename T, typename C,
+    std::enable_if_t<
+        is_rosparam_v<T> && is_invocable_v<C>
+        && std::is_convertible<invoke_result_t<C>, T>::value, int
+    >
+>
+T ParameterReference::value_or_eval(C &&callable) {
+    const boost::optional<T> maybe_value = value<T>();
+
+    if (maybe_value) {
+        // no NRVO with subobjects
+        return std::move(maybe_value.value());
+    }
+
+    return invoke(std::forward<C>(callable));
+}
+
+template <typename T, std::enable_if_t<is_rosparam_v<T>, int>>
+T ParameterReference::value_or_throw() {
+    const boost::optional<T> maybe_value = value<T>();
+
+    if (maybe_value) {
+        return std::move(maybe_value.value());
+    }
+
+    throw ParameterNotFoundException{ "ParameterReference::value_or_throw",
+                                      key_ };
 }
 
 ParameterReference::ParameterReference(const ParameterServer &parent,
