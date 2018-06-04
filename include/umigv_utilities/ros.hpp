@@ -76,7 +76,8 @@ public:
     T value_or_throw();
 
 private:
-    ParameterReference(const ParameterServer &parent, std::string key) noexcept;
+    inline ParameterReference(const ParameterServer &parent,
+                              std::string key) noexcept;
 
     const ParameterServer *parent_ptr_ = nullptr;
     std::string key_;
@@ -190,8 +191,8 @@ T ParameterReference::value_or_throw() {
                                       key_ };
 }
 
-ParameterReference::ParameterReference(const ParameterServer &parent,
-                                       std::string key) noexcept
+inline ParameterReference::ParameterReference(const ParameterServer &parent,
+                                              std::string key) noexcept
 : parent_ptr_{ &parent }, key_{ std::move(key) } { }
 
 } // namespace umigv
