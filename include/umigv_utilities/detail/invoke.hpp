@@ -1,53 +1,76 @@
 #ifndef UMIGV_DETAIL_INVOKE_HPP
 #define UMIGV_DETAIL_INVOKE_HPP
 
-// packports std::invoke from C++17 to C++14
+#include "umigv_utilities/traits.hpp"
+#include "umigv_utilities/detail/invoke_traits.hpp"
 
-#include <type_traits> // std::enable_if_t
-#include <utility> // std::declval, std::forward
+#include <type_traits>
 
 namespace umigv {
 namespace detail {
 
-template <typename T, typename Function, typename U, typename ...Args,
-          typename = std::enable_if_t<std::is_base_of<T, std::decay_t<U>>::value>>
-decltype(auto) invoke_impl(Function T::* function, U &&u, Args &&...args)
-    noexcept(noexcept((std::declval<U>().*function)(std::declval<Args>()...)))
-{
-    return (std::forward<U>(u).*function)(std::forward<Args>(args)...);
-}
+template <typename T, typename, typename ...As>
+struct invoke_result { };
 
-template <typename Function, typename T, typename U, typename ...Args,
-          typename = std::enable_if_t<std::is_base_of<T, std::decay_t<U>>::value>>
-decltype(auto) invoke_impl(Function T::* function, U *u, Args &&...args)
-    noexcept(noexcept((std::declval<U*>->*function)(std::declval<Args>()...)))
-{
-    return (u->*function)(std::forward<Args>(args)...);
-}
-
-template <typename Function, typename ...Args>
-decltype(auto) invoke_impl(Function &&f, Args &&...args)
-    noexcept(noexcept(std::declval<Function>()(std::declval<Args>()...)))
-{
-    return std::forward<Function>(f)(std::forward<Args>(args)...);
-}
-
-template <typename Function, typename ...Args>
-decltype(auto) invoke(Function &&function, Args &&...args)
-    noexcept(noexcept(invoke_impl(std::declval<Function>(),
-                                  std::declval<Args>()...)))
-{
-    return invoke_impl(std::forward<Function>(function), std::forward<Args>(args)...);
-}
-
-template <typename Function, typename ...Args>
-struct InvokeResult {
-    using type = decltype((invoke(std::declval<Function>(),
-                                  std::declval<Args>()...)));
+template <typename T, typename ...As>
+struct invoke_result<
+    T, void_t<typename invoke_traits<T, void, As...>::result>, As...
+> {
+    using type = typename invoke_traits<T, void, As...>::result;
 };
 
-template <typename Function, typename ...Args>
-using InvokeResultT = typename InvokeResult<Function, Args...>::type;
+template <typename T, typename, typename ...As>
+struct is_invocable : std::false_type { };
+
+template <typename T, typename ...As>
+struct is_invocable<
+    T, void_t<typename invoke_traits<T, void, As...>::result>, As...
+> : std::true_type { };
+
+template <typename T, typename, typename ...As>
+struct is_nothrow_invocable : std::false_type { };
+
+template <typename T, typename ...As>
+struct is_nothrow_invocable<
+    T, void_t<
+        typename invoke_traits<T, void, As...>::result,
+        std::enable_if_t<invoke_traits<T, void, As...>::is_nothrow>
+    >, As...
+> : std::true_type { };
+
+template <typename T, typename U, typename ...As>
+constexpr decltype(auto) invoke(member_function_ref_tag, T &&t, U &&u,
+                                As &&...args)
+noexcept(is_nothrow_invocable<T, void, U, As...>::value) {
+    return (std::forward<U>(u).*std::forward<T>(t))(std::forward<As>(args)...);
+}
+
+template <typename T, typename U, typename ...As>
+constexpr decltype(auto) invoke(member_function_ptr_tag, T &&t, U &&u,
+                                As &&...args)
+noexcept(is_nothrow_invocable<T, void, U, As...>::value) {
+    return ((*std::forward<U>(u)).*std::forward<T>(t))(
+        std::forward<As>(args)...
+    );
+}
+
+template <typename T, typename U>
+constexpr decltype(auto) invoke(member_data_ref_tag, T &&t, U &&u)
+noexcept(is_nothrow_invocable<T, void, U>::value) {
+    return std::forward<U>(u).*std::forward<T>(t);
+}
+
+template <typename T, typename U>
+constexpr decltype(auto) invoke(member_data_ptr_tag, T &&t, U &&u)
+noexcept(is_nothrow_invocable<T, void, U>::value) {
+    return (*std::forward<U>(u)).*std::forward<T>(t);
+}
+
+template <typename T, typename ...As>
+constexpr decltype(auto) invoke(functor_tag, T &&t, As &&...args)
+noexcept(is_nothrow_invocable<T, void, As...>::value) {
+    return std::forward<T>(t)(std::forward<As>(args)...);
+}
 
 } // namespace detail
 } // namespace umigv

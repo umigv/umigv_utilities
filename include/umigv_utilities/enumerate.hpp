@@ -4,7 +4,7 @@
 // range helper; provided a range or iterator pair, will enumerate each
 // element upon dereferencing
 
-#include "types.hpp" // umigv::usize, umigv::isize
+#include "umigv_utilities/types.hpp" // umigv::usize, umigv::isize
 
 #include <iterator> // std::begin, std::end, std::iterator_traits
 #include <type_traits> // std::common_type_t

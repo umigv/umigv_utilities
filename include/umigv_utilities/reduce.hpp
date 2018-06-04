@@ -1,7 +1,7 @@
 #ifndef UMIGV_REDUCE_HPP
 #define UMIGV_REDUCE_HPP
 
-#include "detail/invoke.hpp" // detail::invoke
+#include "umigv_utilities/invoke.hpp" // detail::invoke
 
 #include <iterator> // std::begin, std::end, std::iterator_traits
 #include <utility> // std::forward
@@ -23,8 +23,7 @@ decltype(auto) reduce(Begin begin, End end, Operator &&op) {
     ++begin;
 
     while (begin != end) {
-        accumulator =
-            detail::invoke(std::forward<Operator>(op), accumulator, *begin);
+        accumulator = invoke(std::forward<Operator>(op), accumulator, *begin);
 
         ++begin;
     }
